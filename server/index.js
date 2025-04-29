@@ -23,6 +23,7 @@ import serverless from "serverless-http";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config();
+
 const app = express();
 app.use(express.json());
 app.use(helmet());
@@ -30,13 +31,11 @@ app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("common"));
 app.use(bodyParser.json({ limit: "30mb", extended: true }));
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
-app.use(cors(
-  {
-    origin: ["https://threads-bay-delta.vercel.app/"],
-    methods: ["POST","GET"],
-    credentials: true
-  }
-));
+app.use(cors({
+  origin: ["https://threads-bay-delta.vercel.app"],
+  methods: ["POST", "GET"],
+  credentials: true
+}));
 app.use("/assets", express.static(path.join(__dirname, "public/assets")));
 
 /* FILE STORAGE */
@@ -64,6 +63,7 @@ app.get("/", (req, res) => {
   res.send("Server is running");
 });
 
+/* Additional Routes */
 app.get('/users', async (req, res) => {
   try {
     const users = await User.find();
@@ -76,7 +76,6 @@ app.get('/users', async (req, res) => {
 app.get('/user/:name', async (req, res) => {
   const { name } = req.params;
   try {
-    // Search for users where firstName or lastName matches the provided name
     const user = await User.findOne({ firstName: name });
     if (user) {
       res.json(user);
@@ -100,16 +99,11 @@ app.get('/postss', async (req, res) => {
 app.get('/users/:name/posts', async (req, res) => {
   const { name } = req.params;
   try {
-    // Find the user by firstName (assuming firstName stores the user's name)
     const user = await User.findOne({ firstName: name });
-    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Find all posts by the user using their user ID
     const userPosts = await Post.find({ userId: user._id });
-    
     res.json(userPosts);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -119,16 +113,12 @@ app.get('/users/:name/posts', async (req, res) => {
 app.put('/save/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
-    const userDataToUpdate = req.body; // Assuming the updated user data is sent in the request body
-
-    // Update user data in the database
+    const userDataToUpdate = req.body;
     const updatedUser = await User.findByIdAndUpdate(userId, userDataToUpdate, { new: true });
 
     if (!updatedUser) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    // Respond with updated user data
     res.status(200).json(updatedUser);
   } catch (error) {
     console.error('Error updating user data:', error);
@@ -138,33 +128,44 @@ app.put('/save/:userId', async (req, res) => {
 
 app.get("/search", async (req, res) => {
   try {
-    const { query } = req.query; // Extract the search query from query parameters
-    // Perform a database query to find users matching the search query
+    const { query } = req.query;
     const users = await User.find({
       $or: [
         { firstName: { $regex: query, $options: 'i' } },
-        // Add more fields to search as needed (e.g., lastName, email, etc.)
+        // Extend for lastName or email if needed
       ]
     });
-
-    // Respond with the found users
     res.json(users);
   } catch (error) {
-    // If an error occurs, send an error response
     console.error('Error searching users:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/* MONGOOSE SETUP */
-mongoose.connect(process.env.MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log("Connected to MongoDB");
-})
-.catch((error) => console.log(`${error} did not connect`));
+/* MONGOOSE CONNECTION HANDLING FOR SERVERLESS */
+let isConnected = false;
 
+const connectToDB = async () => {
+  if (isConnected) return;
+
+  try {
+    await mongoose.connect(process.env.MONGO_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    isConnected = true;
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+  }
+};
+
+/* Middleware to ensure DB connection before handling requests */
+app.use(async (req, res, next) => {
+  await connectToDB();
+  next();
+});
+
+/* Export the serverless handler */
 const handler = serverless(app);
 export default handler;

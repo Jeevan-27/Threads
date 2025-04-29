@@ -169,9 +169,9 @@ async function connectToDatabase() {
   }
 }
 
-// Immediately connect once serverless container loads
-connectToDatabase().catch((error) => {
-  console.error("Initial MongoDB connection failed:", error);
+app.use(async (req, res, next) => {
+  await connectToDatabase();
+  next();
 });
 
 /* Export serverless handler */

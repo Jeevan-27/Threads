@@ -17,6 +17,7 @@ import { verifyToken } from "./middleware/auth.js";
 import User from "./models/User.js";
 import Post from "./models/Post.js";
 import { users, posts } from "./data/index.js";
+import serverless from "serverless-http";
 
 /* CONFIGURATIONS */
 const __filename = fileURLToPath(import.meta.url);
@@ -156,17 +157,14 @@ app.get("/search", async (req, res) => {
 });
 
 /* MONGOOSE SETUP */
-const PORT = process.env.PORT || 6001;
 mongoose.connect(process.env.MONGO_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
+.then(() => {
+  console.log("Connected to MongoDB");
+})
+.catch((error) => console.log(`${error} did not connect`));
 
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server Port: ${PORT}`));
-
-    /* ADD DATA ONE TIME */
-    // User.insertMany(users);
-    // Post.insertMany(posts);
-  })
-  .catch((error) => console.log(`${error} did not connect`));
+const handler = serverless(app);
+export default handler;

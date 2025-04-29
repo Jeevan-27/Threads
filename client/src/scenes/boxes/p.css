@@ -1,0 +1,27 @@
+
+.comment-container {
+  max-height: 200px;
+  overflow: auto;
+  background-color:#020202; 
+}
+.comment-container .comment {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+.comment-container .comment:first-child {
+  margin-top: 0;
+}
+.comment-container .comment:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+.heart-animation {
+  animation: heartBeat 0.5s;
+}
